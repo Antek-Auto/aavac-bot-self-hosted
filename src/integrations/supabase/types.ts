@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          email: string | null
+          full_name: string | null
+          id: string
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
+          subscription_tier: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          email?: string | null
+          full_name?: string | null
+          id?: string
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          subscription_tier?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       widget_configs: {
         Row: {
           allowed_domains: string[] | null
@@ -29,6 +71,7 @@ export type Database = {
           primary_color: string | null
           title: string | null
           updated_at: string
+          user_id: string | null
           voice_agent_id: string | null
         }
         Insert: {
@@ -45,6 +88,7 @@ export type Database = {
           primary_color?: string | null
           title?: string | null
           updated_at?: string
+          user_id?: string | null
           voice_agent_id?: string | null
         }
         Update: {
@@ -61,6 +105,7 @@ export type Database = {
           primary_color?: string | null
           title?: string | null
           updated_at?: string
+          user_id?: string | null
           voice_agent_id?: string | null
         }
         Relationships: []
