@@ -14,13 +14,63 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      widget_configs: {
+        Row: {
+          allowed_domains: string[] | null
+          api_key: string
+          chat_agent_id: string | null
+          created_at: string
+          enable_chat: boolean | null
+          enable_voice: boolean | null
+          greeting: string | null
+          id: string
+          name: string
+          position: string | null
+          primary_color: string | null
+          title: string | null
+          updated_at: string
+          voice_agent_id: string | null
+        }
+        Insert: {
+          allowed_domains?: string[] | null
+          api_key: string
+          chat_agent_id?: string | null
+          created_at?: string
+          enable_chat?: boolean | null
+          enable_voice?: boolean | null
+          greeting?: string | null
+          id?: string
+          name: string
+          position?: string | null
+          primary_color?: string | null
+          title?: string | null
+          updated_at?: string
+          voice_agent_id?: string | null
+        }
+        Update: {
+          allowed_domains?: string[] | null
+          api_key?: string
+          chat_agent_id?: string | null
+          created_at?: string
+          enable_chat?: boolean | null
+          enable_voice?: boolean | null
+          greeting?: string | null
+          id?: string
+          name?: string
+          position?: string | null
+          primary_color?: string | null
+          title?: string | null
+          updated_at?: string
+          voice_agent_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      generate_widget_api_key: { Args: never; Returns: string }
     }
     Enums: {
       [_ in never]: never
