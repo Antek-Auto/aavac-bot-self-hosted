@@ -31,21 +31,65 @@ serve(async (req) => {
       initWidget(widgetConfig);
     }
   }
-  
-  // Load Retell SDK
-  var retellScript = document.createElement("script");
-  retellScript.src = "https://unpkg.com/retell-client-js-sdk@2.0.7/dist/index.umd.js";
-  retellScript.onload = function() {
-    console.log("RetellWidget: SDK loaded");
+
+  function loadScript(src, onload, onerror) {
+    var s = document.createElement("script");
+    s.src = src;
+    s.async = true;
+    s.onload = onload;
+    s.onerror = onerror || function() {};
+    (document.head || document.documentElement).appendChild(s);
+  }
+
+  function markSdkReady() {
     sdkLoaded = true;
     tryInitWidget();
-  };
-  retellScript.onerror = function() {
-    console.error("RetellWidget: Failed to load SDK");
-    sdkLoaded = true; // Continue anyway, will show error when trying to call
-    tryInitWidget();
-  };
-  document.head.appendChild(retellScript);
+  }
+
+  // Load Retell SDK + required dependencies (UMD build expects globals)
+  loadScript(
+    "https://cdn.jsdelivr.net/npm/eventemitter3@5.0.1/dist/eventemitter3.umd.min.js",
+    function() {
+      // Normalize expected global name
+      if (!window.eventemitter3) {
+        window.eventemitter3 = window.EventEmitter3 || window.eventemitter3;
+      }
+
+      loadScript(
+        "https://cdn.jsdelivr.net/npm/livekit-client@2.15.6/dist/livekit-client.umd.min.js",
+        function() {
+          // Normalize expected global name
+          if (!window.livekitClient) {
+            window.livekitClient = window.LivekitClient || window.livekitClient;
+          }
+
+          loadScript(
+            "https://cdn.jsdelivr.net/npm/retell-client-js-sdk@2.0.7/dist/index.umd.js",
+            function() {
+              if (window.retellClientJsSdk && window.retellClientJsSdk.RetellWebClient) {
+                console.log("RetellWidget: SDK loaded");
+              } else {
+                console.error("RetellWidget: SDK loaded but globals missing");
+              }
+              markSdkReady();
+            },
+            function() {
+              console.error("RetellWidget: Failed to load SDK");
+              markSdkReady();
+            }
+          );
+        },
+        function() {
+          console.error("RetellWidget: Failed to load LiveKit dependency");
+          markSdkReady();
+        }
+      );
+    },
+    function() {
+      console.error("RetellWidget: Failed to load EventEmitter dependency");
+      markSdkReady();
+    }
+  );
   
   // Fetch widget config
   fetch(BASE_URL + "/widget-config?api_key=" + API_KEY)
@@ -386,8 +430,8 @@ serve(async (req) => {
         }
         
         // Initialize Retell client
-        if (window.RetellWebClient) {
-          retellClient = new window.RetellWebClient();
+        if (window.retellClientJsSdk && window.retellClientJsSdk.RetellWebClient) {
+          retellClient = new window.retellClientJsSdk.RetellWebClient();
           
           retellClient.on("call_started", function() {
             console.log("RetellWidget: Call started");
