@@ -1,8 +1,46 @@
+import { useEffect, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import FloatingVoiceWidget from "@/components/FloatingVoiceWidget";
-import { Sparkles, Code } from "lucide-react";
+import { Sparkles, Code, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
+interface DemoSettings {
+  title: string | null;
+  greeting: string | null;
+  enable_voice: boolean | null;
+  enable_chat: boolean | null;
+  primary_color: string | null;
+}
+
 const Index = () => {
+  const [settings, setSettings] = useState<DemoSettings | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchSettings = async () => {
+      const { data } = await supabase
+        .from("demo_settings")
+        .select("title, greeting, enable_voice, enable_chat, primary_color")
+        .limit(1)
+        .maybeSingle();
+
+      if (data) {
+        setSettings(data);
+      }
+      setLoading(false);
+    };
+
+    fetchSettings();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-6 relative overflow-hidden">
       {/* Background gradient effects */}
@@ -65,10 +103,11 @@ const Index = () => {
       {/* Floating Widget */}
       <FloatingVoiceWidget 
         config={{
-          title: "AI Assistant",
-          greeting: "Hi there! 👋 How can I help you today?",
-          enableVoice: true,
-          enableChat: true,
+          title: settings?.title || "AI Assistant",
+          greeting: settings?.greeting || "Hi there! 👋 How can I help you today?",
+          enableVoice: settings?.enable_voice ?? true,
+          enableChat: settings?.enable_chat ?? true,
+          primaryColor: settings?.primary_color || undefined,
         }}
       />
     </div>

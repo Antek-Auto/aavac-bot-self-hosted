@@ -14,6 +14,48 @@ export type Database = {
   }
   public: {
     Tables: {
+      demo_settings: {
+        Row: {
+          chat_agent_id: string | null
+          enable_chat: boolean | null
+          enable_voice: boolean | null
+          greeting: string | null
+          id: string
+          primary_color: string | null
+          retell_api_key: string | null
+          title: string | null
+          updated_at: string
+          updated_by: string | null
+          voice_agent_id: string | null
+        }
+        Insert: {
+          chat_agent_id?: string | null
+          enable_chat?: boolean | null
+          enable_voice?: boolean | null
+          greeting?: string | null
+          id?: string
+          primary_color?: string | null
+          retell_api_key?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          voice_agent_id?: string | null
+        }
+        Update: {
+          chat_agent_id?: string | null
+          enable_chat?: boolean | null
+          enable_voice?: boolean | null
+          greeting?: string | null
+          id?: string
+          primary_color?: string | null
+          retell_api_key?: string | null
+          title?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          voice_agent_id?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
