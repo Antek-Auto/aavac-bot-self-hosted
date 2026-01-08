@@ -49,7 +49,7 @@ export default function Landing() {
           <p className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto">
             Create customizable voice and chat widgets powered by{" "}
             <a 
-              href="https://www.retellai.com" 
+              href="https://www.retellai.com/partner/antek-automation" 
               target="_blank" 
               rel="noopener noreferrer"
               className="text-primary hover:underline inline-flex items-center gap-1"
@@ -83,7 +83,7 @@ export default function Landing() {
             Everything you need
           </h2>
           <p className="text-muted-foreground text-center mb-12">
-            Powered by <a href="https://www.retellai.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a> for natural voice and chat conversations
+            Powered by <a href="https://www.retellai.com/partner/antek-automation" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a> for natural voice and chat conversations
           </p>
           
           <div className="grid md:grid-cols-3 gap-8">
@@ -279,13 +279,13 @@ export default function Landing() {
         <div className="container mx-auto max-w-3xl text-center">
           <h2 className="text-2xl font-bold mb-4">Powered by Retell AI</h2>
           <p className="text-muted-foreground mb-6">
-            AAVAC Bot uses <a href="https://www.retellai.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a> as our AI voice and chat provider. 
+            AAVAC Bot uses <a href="https://www.retellai.com/partner/antek-automation" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a> as our AI voice and chat provider. 
             Retell AI delivers natural, human-like conversations with ultra-low latency, 
             making your widgets feel responsive and intelligent.
           </p>
           <a 
-            href="https://www.retellai.com" 
-            target="_blank" 
+            href="https://www.retellai.com/partner/antek-automation" 
+            target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 text-primary hover:underline"
           >
@@ -298,7 +298,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-border">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
-          <p className="mb-2">© {new Date().getFullYear()} AAVAC Bot. Powered by <a href="https://www.retellai.com" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a>.</p>
+          <p className="mb-2">© {new Date().getFullYear()} AAVAC Bot. Powered by <a href="https://www.retellai.com/partner/antek-automation" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a>.</p>
           <p>
             A product by{" "}
             <a 
