@@ -15,15 +15,15 @@ serve(async (req) => {
     let retellApiKey = Deno.env.get('RETELL_API_KEY');
     let retellTextAgentId = Deno.env.get('RETELL_TEXT_AGENT_ID');
 
-    const { message, chat_id, api_key: widgetApiKey } = await req.json();
+    const { message, chat_id, api_key: widgetApiKey, is_demo } = await req.json();
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     // Check if api_key is provided to fetch widget-specific config
     if (widgetApiKey) {
       console.log('Fetching widget config for api_key:', widgetApiKey.substring(0, 10) + '...');
-      
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
 
       const { data: widget, error } = await supabase
         .from('widget_configs')
@@ -42,6 +42,27 @@ serve(async (req) => {
         if (widget.chat_agent_id) {
           retellTextAgentId = widget.chat_agent_id;
           console.log('Using widget-specific chat agent ID:', retellTextAgentId);
+        }
+      }
+    } else if (is_demo) {
+      // For demo widget, check demo_settings table
+      console.log('Fetching demo settings...');
+      const { data: demoSettings, error } = await supabase
+        .from('demo_settings')
+        .select('retell_api_key, chat_agent_id')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching demo settings:', error);
+      } else if (demoSettings) {
+        if (demoSettings.retell_api_key) {
+          retellApiKey = demoSettings.retell_api_key;
+          console.log('Using demo-specific Retell API key');
+        }
+        if (demoSettings.chat_agent_id) {
+          retellTextAgentId = demoSettings.chat_agent_id;
+          console.log('Using demo-specific chat agent ID:', retellTextAgentId);
         }
       }
     }

@@ -120,6 +120,7 @@ const Index = () => {
           enableVoice: settings?.enable_voice ?? true,
           enableChat: settings?.enable_chat ?? true,
           primaryColor: settings?.primary_color || undefined,
+          isDemo: true,
         }}
       />
       </div>
