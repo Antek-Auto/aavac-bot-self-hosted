@@ -61,7 +61,7 @@ serve(async (req) => {
       return new Response(JSON.stringify({
         subscribed: true,
         tier: "admin",
-        widget_limit: Infinity,
+        widget_limit: 999999,
         subscription_end: null,
         is_trialing: false,
         is_admin: true,

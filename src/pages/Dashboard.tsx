@@ -289,9 +289,11 @@ export default function Dashboard() {
                     Manage Subscription
                   </DropdownMenuItem>
                 )}
-                <DropdownMenuItem>
-                  <Settings className="w-4 h-4 mr-2" />
-                  Settings
+                <DropdownMenuItem asChild>
+                  <Link to="/settings">
+                    <Settings className="w-4 h-4 mr-2" />
+                    Settings
+                  </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleSignOut}>
                   <LogOut className="w-4 h-4 mr-2" />
@@ -309,7 +311,7 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold">Your Widgets</h1>
             <p className="text-muted-foreground">
-              {widgets.length}/{widgetLimit === Infinity ? "∞" : widgetLimit} widgets used
+              {widgets.length}/{widgetLimit >= 999999 ? "∞" : widgetLimit} widgets used
               {subscription?.is_trialing && " (Trial)"}
             </p>
           </div>
