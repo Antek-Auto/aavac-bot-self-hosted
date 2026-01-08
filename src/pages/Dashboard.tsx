@@ -212,7 +212,10 @@ export default function Dashboard() {
     starter: "Starter",
     pro: "Pro",
     enterprise: "Enterprise",
+    admin: "Admin",
   };
+
+  const isAdmin = subscription?.is_admin || false;
 
   return (
     <div className="min-h-screen bg-background">
@@ -224,7 +227,7 @@ export default function Dashboard() {
           </Link>
           
           <div className="flex items-center gap-4">
-            {currentTier === "free" && (
+            {currentTier === "free" && !isAdmin && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="gap-2">
@@ -264,11 +267,14 @@ export default function Dashboard() {
                   <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
                   <div className="flex items-center gap-2 mt-1">
-                    <Badge variant={currentTier === "free" ? "secondary" : "default"} className="text-xs">
+                    <Badge variant={currentTier === "free" ? "secondary" : currentTier === "admin" ? "destructive" : "default"} className="text-xs">
                       {tierLabels[currentTier]}
                     </Badge>
                     {subscription?.is_trialing && (
                       <Badge variant="outline" className="text-xs">Trial</Badge>
+                    )}
+                    {isAdmin && (
+                      <Badge variant="outline" className="text-xs border-destructive text-destructive">Super User</Badge>
                     )}
                   </div>
                 </div>
@@ -346,7 +352,7 @@ export default function Dashboard() {
         </div>
 
         {/* Upgrade Banner for Free Users */}
-        {currentTier === "free" && (
+        {currentTier === "free" && !isAdmin && (
           <div className="glass rounded-xl p-6 mb-8 border-primary/20 bg-primary/5">
             <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
               <div>
