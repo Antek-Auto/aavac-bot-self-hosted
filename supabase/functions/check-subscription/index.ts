@@ -19,6 +19,7 @@ const WIDGET_LIMITS: Record<string, number> = {
   starter: 50,
   pro: 200,
   enterprise: Infinity,
+  admin: Infinity,
 };
 
 serve(async (req) => {
@@ -46,6 +47,30 @@ serve(async (req) => {
     const user = userData.user;
     if (!user?.email) throw new Error("User not authenticated or email not available");
 
+    // Check if user is admin
+    const { data: roleData } = await supabaseClient
+      .from("user_roles")
+      .select("role")
+      .eq("user_id", user.id)
+      .eq("role", "admin")
+      .maybeSingle();
+
+    const isAdmin = !!roleData;
+
+    if (isAdmin) {
+      return new Response(JSON.stringify({
+        subscribed: true,
+        tier: "admin",
+        widget_limit: Infinity,
+        subscription_end: null,
+        is_trialing: false,
+        is_admin: true,
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 200,
+      });
+    }
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
     
@@ -54,6 +79,7 @@ serve(async (req) => {
         subscribed: false,
         tier: "free",
         widget_limit: WIDGET_LIMITS.free,
+        is_admin: false,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
         status: 200,
@@ -96,6 +122,7 @@ serve(async (req) => {
       widget_limit: WIDGET_LIMITS[tier] || WIDGET_LIMITS.free,
       subscription_end: subscriptionEnd,
       is_trialing: isTrialing,
+      is_admin: false,
     }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,

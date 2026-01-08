@@ -18,10 +18,11 @@ interface Profile {
 
 interface SubscriptionInfo {
   subscribed: boolean;
-  tier: "free" | "starter" | "pro" | "enterprise";
+  tier: "free" | "starter" | "pro" | "enterprise" | "admin";
   widget_limit: number;
   subscription_end: string | null;
   is_trialing: boolean;
+  is_admin: boolean;
 }
 
 interface AuthContextType {
@@ -71,6 +72,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           widget_limit: 5,
           subscription_end: null,
           is_trialing: false,
+          is_admin: false,
         });
         return;
       }
@@ -83,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         widget_limit: 5,
         subscription_end: null,
         is_trialing: false,
+        is_admin: false,
       });
     }
   }, []);
