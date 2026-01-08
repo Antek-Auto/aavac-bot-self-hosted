@@ -298,7 +298,7 @@ export default function Landing() {
       {/* Footer */}
       <footer className="py-8 px-6 border-t border-border">
         <div className="container mx-auto text-center text-sm text-muted-foreground">
-          <p className="mb-2">© {new Date().getFullYear()} AAVAC Bot. Powered by <a href="https://www.retellai.com/partner/antek-automation" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a>.</p>
+          <p className="mb-2">© {new Date().getFullYear()} AAVAC Bot. Powered by <a href="https://www.retellai.com/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Retell AI</a>.</p>
           <p>
             A product by{" "}
             <a 
