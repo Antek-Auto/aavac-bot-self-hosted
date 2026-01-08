@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from "react";
 import { User, Session } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,7 +8,7 @@ interface Profile {
   email: string | null;
   full_name: string | null;
   avatar_url: string | null;
-  subscription_tier: "free" | "pro";
+  subscription_tier: "free" | "starter" | "pro" | "enterprise";
   stripe_customer_id: string | null;
   stripe_subscription_id: string | null;
   subscription_status: string | null;
@@ -16,15 +16,25 @@ interface Profile {
   updated_at: string;
 }
 
+interface SubscriptionInfo {
+  subscribed: boolean;
+  tier: "free" | "starter" | "pro" | "enterprise";
+  widget_limit: number;
+  subscription_end: string | null;
+  is_trialing: boolean;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   profile: Profile | null;
+  subscription: SubscriptionInfo | null;
   loading: boolean;
   signUp: (email: string, password: string, fullName?: string) => Promise<{ error: Error | null }>;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   refreshProfile: () => Promise<void>;
+  refreshSubscription: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -33,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [subscription, setSubscription] = useState<SubscriptionInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchProfile = async (userId: string) => {
@@ -49,6 +60,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return data as Profile | null;
   };
 
+  const fetchSubscription = useCallback(async () => {
+    try {
+      const { data, error } = await supabase.functions.invoke("check-subscription");
+      if (error) {
+        console.error("Error checking subscription:", error);
+        setSubscription({
+          subscribed: false,
+          tier: "free",
+          widget_limit: 5,
+          subscription_end: null,
+          is_trialing: false,
+        });
+        return;
+      }
+      setSubscription(data as SubscriptionInfo);
+    } catch (err) {
+      console.error("Error fetching subscription:", err);
+      setSubscription({
+        subscribed: false,
+        tier: "free",
+        widget_limit: 5,
+        subscription_end: null,
+        is_trialing: false,
+      });
+    }
+  }, []);
+
   const refreshProfile = async () => {
     if (user) {
       const profileData = await fetchProfile(user.id);
@@ -56,31 +94,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const refreshSubscription = useCallback(async () => {
+    if (session) {
+      await fetchSubscription();
+    }
+  }, [session, fetchSubscription]);
+
   useEffect(() => {
-    // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+    const { data: { subscription: authSubscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
         setUser(session?.user ?? null);
         
-        // Defer profile fetch with setTimeout to avoid deadlock
         if (session?.user) {
           setTimeout(() => {
             fetchProfile(session.user.id).then(setProfile);
+            fetchSubscription();
           }, 0);
         } else {
           setProfile(null);
+          setSubscription(null);
         }
       }
     );
 
-    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       if (session?.user) {
-        fetchProfile(session.user.id).then((p) => {
-          setProfile(p);
+        Promise.all([
+          fetchProfile(session.user.id),
+          fetchSubscription(),
+        ]).then(([profileData]) => {
+          setProfile(profileData);
           setLoading(false);
         });
       } else {
@@ -88,8 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     });
 
-    return () => subscription.unsubscribe();
-  }, []);
+    return () => authSubscription.unsubscribe();
+  }, [fetchSubscription]);
+
+  // Refresh subscription every minute
+  useEffect(() => {
+    if (!session) return;
+    
+    const interval = setInterval(() => {
+      fetchSubscription();
+    }, 60000);
+
+    return () => clearInterval(interval);
+  }, [session, fetchSubscription]);
 
   const signUp = async (email: string, password: string, fullName?: string) => {
     const redirectUrl = `${window.location.origin}/`;
@@ -122,6 +179,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
     setSession(null);
     setProfile(null);
+    setSubscription(null);
   };
 
   return (
@@ -130,11 +188,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user,
         session,
         profile,
+        subscription,
         loading,
         signUp,
         signIn,
         signOut,
         refreshProfile,
+        refreshSubscription,
       }}
     >
       {children}

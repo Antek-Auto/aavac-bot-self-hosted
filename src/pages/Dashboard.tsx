@@ -1,11 +1,10 @@
 import { useEffect, useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useSearchParams } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
 import {
   Dialog,
   DialogContent,
@@ -32,7 +31,10 @@ import {
   LogOut,
   Crown,
   Settings,
+  CreditCard,
+  Sparkles,
 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 interface Widget {
   id: string;
@@ -49,18 +51,35 @@ interface Widget {
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const { user, profile, loading, signOut, refreshProfile } = useAuth();
+  const [searchParams] = useSearchParams();
+  const { user, profile, subscription, loading, signOut, refreshSubscription } = useAuth();
   const [widgets, setWidgets] = useState<Widget[]>([]);
   const [loadingWidgets, setLoadingWidgets] = useState(true);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [newWidgetName, setNewWidgetName] = useState("");
+  const [isCheckingOut, setIsCheckingOut] = useState<string | null>(null);
+  const [isOpeningPortal, setIsOpeningPortal] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
       navigate("/auth");
     }
   }, [user, loading, navigate]);
+
+  // Handle checkout result
+  useEffect(() => {
+    const checkoutResult = searchParams.get("checkout");
+    if (checkoutResult === "success") {
+      toast.success("Subscription activated! Welcome to your new plan.");
+      refreshSubscription();
+      // Clean up URL
+      window.history.replaceState({}, "", "/dashboard");
+    } else if (checkoutResult === "canceled") {
+      toast.info("Checkout canceled");
+      window.history.replaceState({}, "", "/dashboard");
+    }
+  }, [searchParams, refreshSubscription]);
 
   useEffect(() => {
     if (user) {
@@ -83,15 +102,23 @@ export default function Dashboard() {
     setLoadingWidgets(false);
   };
 
+  const widgetLimit = subscription?.widget_limit || 5;
+  const currentTier = subscription?.tier || "free";
+  const canCreateWidget = widgets.length < widgetLimit;
+
   const createWidget = async () => {
     if (!newWidgetName.trim()) {
       toast.error("Please enter a widget name");
       return;
     }
 
+    if (!canCreateWidget) {
+      toast.error(`You've reached your limit of ${widgetLimit} widgets. Upgrade to create more.`);
+      return;
+    }
+
     setIsCreating(true);
 
-    // Generate API key client-side for now
     const apiKey = `wgt_${Array.from(crypto.getRandomValues(new Uint8Array(24)))
       .map((b) => b.toString(16).padStart(2, "0"))
       .join("")}`;
@@ -103,12 +130,8 @@ export default function Dashboard() {
     });
 
     if (error) {
-      if (error.message.includes("Free tier is limited")) {
-        toast.error("Free tier is limited to 1 widget. Upgrade to Pro for unlimited widgets.");
-      } else {
-        console.error("Error creating widget:", error);
-        toast.error("Failed to create widget");
-      }
+      console.error("Error creating widget:", error);
+      toast.error("Failed to create widget");
     } else {
       toast.success("Widget created!");
       setNewWidgetName("");
@@ -136,6 +159,41 @@ export default function Dashboard() {
     toast.success("Embed code copied to clipboard!");
   };
 
+  const handleCheckout = async (tier: "starter" | "pro") => {
+    setIsCheckingOut(tier);
+    try {
+      const { data, error } = await supabase.functions.invoke("create-checkout", {
+        body: { tier },
+      });
+
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err) {
+      console.error("Checkout error:", err);
+      toast.error("Failed to start checkout");
+    } finally {
+      setIsCheckingOut(null);
+    }
+  };
+
+  const handleManageSubscription = async () => {
+    setIsOpeningPortal(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("customer-portal");
+      if (error) throw error;
+      if (data?.url) {
+        window.open(data.url, "_blank");
+      }
+    } catch (err) {
+      console.error("Portal error:", err);
+      toast.error("Failed to open subscription management");
+    } finally {
+      setIsOpeningPortal(false);
+    }
+  };
+
   const handleSignOut = async () => {
     await signOut();
     navigate("/");
@@ -149,7 +207,12 @@ export default function Dashboard() {
     );
   }
 
-  const canCreateWidget = profile?.subscription_tier === "pro" || widgets.length < 1;
+  const tierLabels: Record<string, string> = {
+    free: "Free",
+    starter: "Starter",
+    pro: "Pro",
+    enterprise: "Enterprise",
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -157,15 +220,37 @@ export default function Dashboard() {
       <nav className="border-b border-border">
         <div className="container mx-auto px-6 h-16 flex items-center justify-between">
           <Link to="/" className="text-xl font-bold text-gradient">
-            VoiceWidget
+            AAVAC Bot
           </Link>
           
           <div className="flex items-center gap-4">
-            {profile?.subscription_tier === "free" && (
-              <Button variant="outline" size="sm" className="gap-2">
-                <Crown className="w-4 h-4" />
-                Upgrade to Pro
-              </Button>
+            {currentTier === "free" && (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="gap-2">
+                    <Crown className="w-4 h-4" />
+                    Upgrade
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuItem onClick={() => handleCheckout("starter")} disabled={!!isCheckingOut}>
+                    {isCheckingOut === "starter" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Sparkles className="w-4 h-4 mr-2" />
+                    )}
+                    Starter - $19/mo
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => handleCheckout("pro")} disabled={!!isCheckingOut}>
+                    {isCheckingOut === "pro" ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Crown className="w-4 h-4 mr-2" />
+                    )}
+                    Pro - $39/mo
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             )}
             
             <DropdownMenu>
@@ -178,11 +263,26 @@ export default function Dashboard() {
                 <div className="px-2 py-1.5">
                   <p className="text-sm font-medium">{profile?.full_name || "User"}</p>
                   <p className="text-xs text-muted-foreground">{user?.email}</p>
-                  <p className="text-xs text-primary mt-1 capitalize">
-                    {profile?.subscription_tier} Plan
-                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Badge variant={currentTier === "free" ? "secondary" : "default"} className="text-xs">
+                      {tierLabels[currentTier]}
+                    </Badge>
+                    {subscription?.is_trialing && (
+                      <Badge variant="outline" className="text-xs">Trial</Badge>
+                    )}
+                  </div>
                 </div>
                 <DropdownMenuSeparator />
+                {currentTier !== "free" && (
+                  <DropdownMenuItem onClick={handleManageSubscription} disabled={isOpeningPortal}>
+                    {isOpeningPortal ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <CreditCard className="w-4 h-4 mr-2" />
+                    )}
+                    Manage Subscription
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem>
                   <Settings className="w-4 h-4 mr-2" />
                   Settings
@@ -203,9 +303,8 @@ export default function Dashboard() {
           <div>
             <h1 className="text-2xl font-bold">Your Widgets</h1>
             <p className="text-muted-foreground">
-              {profile?.subscription_tier === "free"
-                ? `${widgets.length}/1 widget used`
-                : `${widgets.length} widgets`}
+              {widgets.length}/{widgetLimit === Infinity ? "∞" : widgetLimit} widgets used
+              {subscription?.is_trialing && " (Trial)"}
             </p>
           </div>
 
@@ -245,6 +344,44 @@ export default function Dashboard() {
             </DialogContent>
           </Dialog>
         </div>
+
+        {/* Upgrade Banner for Free Users */}
+        {currentTier === "free" && (
+          <div className="glass rounded-xl p-6 mb-8 border-primary/20 bg-primary/5">
+            <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+              <div>
+                <h3 className="font-semibold flex items-center gap-2">
+                  <Crown className="w-5 h-5 text-primary" />
+                  Upgrade to unlock more widgets
+                </h3>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Free plan includes attribution link. Upgrade to remove it and get custom branding.
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => handleCheckout("starter")}
+                  disabled={!!isCheckingOut}
+                >
+                  {isCheckingOut === "starter" ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : null}
+                  Starter $19/mo
+                </Button>
+                <Button 
+                  onClick={() => handleCheckout("pro")}
+                  disabled={!!isCheckingOut}
+                >
+                  {isCheckingOut === "pro" ? (
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                  ) : null}
+                  Pro $39/mo
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {loadingWidgets ? (
           <div className="flex items-center justify-center py-20">
