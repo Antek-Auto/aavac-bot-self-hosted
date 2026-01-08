@@ -31,6 +31,7 @@ export interface WidgetConfig {
   title?: string;
   enableVoice?: boolean;
   enableChat?: boolean;
+  isDemo?: boolean;
 }
 
 interface FloatingVoiceWidgetProps {
@@ -57,6 +58,7 @@ const FloatingVoiceWidget = ({ config }: FloatingVoiceWidgetProps) => {
     title = "AI Assistant",
     enableVoice = true,
     enableChat = true,
+    isDemo = false,
   } = config || {};
 
   // Add greeting message on first open
@@ -127,7 +129,9 @@ const FloatingVoiceWidget = ({ config }: FloatingVoiceWidgetProps) => {
   };
 
   const createVoiceWebCall = async () => {
-    const { data, error } = await supabase.functions.invoke("retell-create-call");
+    const { data, error } = await supabase.functions.invoke("retell-create-call", {
+      body: { is_demo: isDemo },
+    });
 
     if (error) {
       console.error("Edge function error:", error);
@@ -143,7 +147,7 @@ const FloatingVoiceWidget = ({ config }: FloatingVoiceWidgetProps) => {
 
   const sendTextMessage = async (message: string): Promise<{ response: string; chat_id?: string }> => {
     const { data, error } = await supabase.functions.invoke("retell-text-chat", {
-      body: { message, chat_id: chatId },
+      body: { message, chat_id: chatId, is_demo: isDemo },
     });
 
     if (error) {

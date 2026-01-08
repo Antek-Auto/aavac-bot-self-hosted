@@ -19,13 +19,14 @@ serve(async (req) => {
     // Check if api_key is provided to fetch widget-specific config
     const body = await req.json().catch(() => ({}));
     const widgetApiKey = body.api_key;
+    const isDemo = body.is_demo === true;
+
+    const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+    const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
 
     if (widgetApiKey) {
       console.log('Fetching widget config for api_key:', widgetApiKey.substring(0, 10) + '...');
-      
-      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
-      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
-      const supabase = createClient(supabaseUrl, supabaseKey);
 
       const { data: widget, error } = await supabase
         .from('widget_configs')
@@ -44,6 +45,27 @@ serve(async (req) => {
         if (widget.voice_agent_id) {
           retellAgentId = widget.voice_agent_id;
           console.log('Using widget-specific voice agent ID:', retellAgentId);
+        }
+      }
+    } else if (isDemo) {
+      // For demo widget, check demo_settings table
+      console.log('Fetching demo settings...');
+      const { data: demoSettings, error } = await supabase
+        .from('demo_settings')
+        .select('retell_api_key, voice_agent_id')
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        console.error('Error fetching demo settings:', error);
+      } else if (demoSettings) {
+        if (demoSettings.retell_api_key) {
+          retellApiKey = demoSettings.retell_api_key;
+          console.log('Using demo-specific Retell API key');
+        }
+        if (demoSettings.voice_agent_id) {
+          retellAgentId = demoSettings.voice_agent_id;
+          console.log('Using demo-specific voice agent ID:', retellAgentId);
         }
       }
     }
