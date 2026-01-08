@@ -11,6 +11,7 @@ import WidgetSettings from "./pages/WidgetSettings";
 import Settings from "./pages/Settings";
 import Embed from "./pages/Embed";
 import Index from "./pages/Index";
+import AdminDemo from "./pages/AdminDemo";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,7 @@ const App = () => (
             <Route path="/settings" element={<Settings />} />
             <Route path="/embed" element={<Embed />} />
             <Route path="/demo" element={<Index />} />
+            <Route path="/admin/demo" element={<AdminDemo />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />
           </Routes>
