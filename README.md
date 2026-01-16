@@ -257,7 +257,6 @@ This project is licensed under the MIT License.
 ## 🙏 Acknowledgments
 
 Built with:
-- [Lovable](https://lovable.dev) - AI-powered web development
 - [Supabase](https://supabase.com) - Backend as a service
 - [Vercel](https://vercel.com) - Deployment platform
 - [Retell AI](https://retellai.com) - Voice AI infrastructure
