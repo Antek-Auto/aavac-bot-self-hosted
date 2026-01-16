@@ -90,29 +90,16 @@ CREATE FUNCTION public.check_widget_limit() RETURNS trigger
     SET search_path TO 'public'
     AS $$
 DECLARE
-  user_tier TEXT;
   widget_count INTEGER;
-  is_admin BOOLEAN;
 BEGIN
-  -- Check if user is admin (bypass all limits)
-  SELECT public.has_role(NEW.user_id, 'admin'::app_role) INTO is_admin;
-  IF is_admin THEN
-    RETURN NEW;
-  END IF;
-
-  -- Get user's subscription tier
-  SELECT subscription_tier INTO user_tier
-  FROM public.profiles
-  WHERE user_id = NEW.user_id;
-  
-  -- Count existing widgets
+  -- Count existing widgets for user
   SELECT COUNT(*) INTO widget_count
   FROM public.widget_configs
   WHERE user_id = NEW.user_id;
   
-  -- Check limits: free = 1 widget, pro = unlimited
-  IF user_tier = 'free' AND widget_count >= 1 THEN
-    RAISE EXCEPTION 'Free tier is limited to 1 widget. Upgrade to Pro for unlimited widgets.';
+  -- Limit to 100 widgets per user
+  IF widget_count >= 100 THEN
+    RAISE EXCEPTION 'You have reached the maximum limit of 100 widgets per account.';
   END IF;
   
   RETURN NEW;
@@ -311,6 +298,7 @@ CREATE TABLE public.widget_configs (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     user_id uuid,
     retell_api_key text,
+    attribution_link text DEFAULT 'https://aavacbot.com'::text,
     CONSTRAINT widget_configs_position_check CHECK (("position" = ANY (ARRAY['bottom-right'::text, 'bottom-left'::text])))
 );
 
