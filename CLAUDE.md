@@ -10,15 +10,23 @@ This is an AI Widget Platform for deploying voice and chat widgets powered by Re
 
 ```bash
 # Development
-npm run dev          # Start dev server on http://[::]:8080
-npm run build        # Production build
-npm run build:dev    # Development build with source maps
-npm run preview      # Preview production build
-npm run lint         # Run ESLint
+npm run dev                  # Start dev server on http://[::]:8080
+npm run build                # Production build
+npm run build:dev            # Development build with source maps
+npm run preview              # Preview production build
+npm run lint                 # Run ESLint
+
+# Setup and Deployment
+npm run setup                # Interactive guided setup (runs scripts/setup.sh)
+npm run setup:production     # Post-deployment automation (runs scripts/post-deploy.sh)
+npm run deploy:functions     # Deploy all edge functions (runs scripts/deploy-functions.sh)
+npm run sync:env             # Sync .env to Vercel and Supabase
+npm run health:check         # Validate deployment health
 
 # Database
 supabase link --project-ref YOUR_PROJECT_REF
-supabase db push     # Apply database migrations
+supabase db push             # Apply all migrations from supabase/migrations/
+supabase db reset            # Reset local database (dev only)
 
 # Edge Functions
 ./scripts/deploy-functions.sh                      # Deploy all edge functions
@@ -27,7 +35,7 @@ supabase functions logs retell-create-call         # View function logs
 supabase secrets set RETELL_API_KEY=your_key       # Set edge function secrets
 
 # Deployment
-vercel --prod        # Deploy to Vercel
+vercel --prod                # Deploy to Vercel
 ```
 
 ## Architecture
@@ -79,12 +87,24 @@ All tables use Row Level Security (RLS) policies.
 
 ### Widget System
 
-Widgets can be configured in three modes:
-1. **Demo Mode** (`is_demo: true`) - Uses `demo_settings` table
-2. **Widget Mode** (`api_key: string`) - Uses `widget_configs` table
-3. **Global Fallback** - Uses `global_settings` table
+The widget system supports three configuration modes with a cascade fallback:
 
-The edge functions cascade through these configurations to find Retell API credentials.
+1. **Demo Mode** (`is_demo: true`) - Uses `demo_settings` table
+   - Accessed via `?is_demo=true` query parameter
+   - Single global demo widget for public testing
+   - Initialized automatically by migration `20260117000000_init_settings.sql`
+
+2. **Widget Mode** (`api_key: string`) - Uses `widget_configs` table
+   - Accessed via `?api_key=<widget_api_key>` query parameter
+   - Per-widget configuration with unique API keys
+   - Each widget can have custom Retell agents and branding
+
+3. **Global Fallback** - Uses `global_settings` table
+   - Used when no demo or api_key is specified
+   - Platform-wide default Retell API key and agent IDs
+   - Configured via admin panel at `/admin`
+
+**Configuration Cascade**: The edge functions (`retell-create-call`, `retell-text-chat`) check configurations in this order: Widget Config → Demo Settings → Global Settings. This allows widgets to override global defaults while maintaining a fallback.
 
 ## Key Files and Locations
 
@@ -116,9 +136,18 @@ The edge functions cascade through these configurations to find Retell API crede
 - `.env.example` - Environment variable template
 - `vercel.json` - Vercel deployment config
 
-### Database
-- `scripts/database-schema.sql` - Complete database schema
-- `supabase/migrations/` - Database migration history
+### Database and Scripts
+- `supabase/migrations/` - Database migrations (applied with `supabase db push`)
+  - `20260116062838_remix_migration_from_pg_dump.sql` - Initial schema
+  - `20260117000000_init_settings.sql` - Auto-initializes demo/global settings
+  - `20260117000001_auto_admin_first_user.sql` - Auto-assigns admin to first signup
+- `scripts/` - Deployment and setup automation scripts
+  - `setup.sh` - Interactive setup wizard
+  - `post-deploy.sh` - Post-deployment automation
+  - `deploy-functions.sh` - Deploy all edge functions
+  - `sync-env.sh` - Sync environment variables
+  - `health-check.sh` - Validate deployment
+  - `setup-database.sh` - Database setup helper
 
 ## Environment Variables
 
@@ -140,8 +169,14 @@ RETELL_TEXT_AGENT_ID=chat_agent_id
 
 ### Adding a New Page
 1. Create component in `src/pages/`
-2. Add route in `src/App.tsx` (before the `*` catch-all route)
-3. Optionally add to navigation in relevant components
+2. Add route in `src/App.tsx` **before the `*` catch-all route** (line 34):
+   ```typescript
+   <Route path="/your-path" element={<YourPage />} />
+   {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+   <Route path="*" element={<NotFound />} />
+   ```
+3. Import the component at the top of `src/App.tsx`
+4. Optionally add to navigation in relevant components (e.g., Dashboard sidebar)
 
 ### Creating a New Widget Setting
 1. Add column to `widget_configs` or `demo_settings` table via migration
@@ -194,18 +229,31 @@ useEffect(() => {
 - **TypeScript Config**: Strict type checking is disabled (`noImplicitAny: false`, `strictNullChecks: false`) - this is intentional for rapid development
 - **Component Library**: Uses shadcn/ui - components are copied into `src/components/ui/` and can be customized
 - **Retell SDK**: The `retell-client-js-sdk` package is used for voice widget functionality
-- **Database Migrations**: Always use migrations for schema changes, never edit the schema SQL directly
+- **Database Migrations**: Always use migrations for schema changes. Create new migrations with `supabase migration new <name>`, never edit existing migrations
+- **Auto-Initialization**: Migrations automatically initialize demo settings, global settings, and auto-assign admin to the first user who signs up
 - **Row Level Security**: All database operations go through RLS policies - test with different user roles
-- **Edge Function CORS**: All edge functions must include CORS headers for browser access
-- **Widget Embedding**: Widgets are embedded via iframe with configuration passed via query params or postMessage
-- **Development Port**: Dev server runs on port 8080 (not the default 5173)
+- **Edge Function CORS**: All edge functions must include CORS headers for browser access. Deploy functions with `--no-verify-jwt` flag
+- **Widget Embedding**: Widgets are embedded via iframe with configuration passed via query params (`?api_key=xxx` or `?is_demo=true`)
+- **Development Port**: Dev server runs on port 8080 (not the default 5173) - configured in vite.config.ts
+- **Setup Scripts**: Use `npm run setup` for interactive first-time setup, or `npm run setup:production` after Vercel deployment
 
 ## Deployment Checklist
 
-1. Ensure `.env` variables are set in Vercel
-2. Deploy edge functions: `./scripts/deploy-functions.sh`
-3. Set edge function secrets: `supabase secrets set RETELL_API_KEY=...`
-4. Run database migrations: `supabase db push`
-5. Deploy frontend: `vercel --prod`
-6. Create admin user via SQL (see SELF-HOSTING.md)
-7. Configure global settings via admin panel
+### Quick Setup (Automated)
+```bash
+npm run setup:production  # Runs post-deployment automation after Vercel deploy
+```
+
+### Manual Setup
+1. Ensure `.env` variables are set in Vercel:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY`
+   - `VITE_SUPABASE_PROJECT_ID`
+2. Link to Supabase: `supabase link --project-ref YOUR_PROJECT_REF`
+3. Apply database migrations: `supabase db push` (auto-initializes settings and first admin)
+4. Deploy edge functions: `./scripts/deploy-functions.sh` or `npm run deploy:functions`
+5. Set edge function secrets: `supabase secrets set RETELL_API_KEY=...`
+6. Deploy frontend: `vercel --prod`
+7. First user to sign up becomes admin automatically
+8. Configure global settings via admin panel at `/admin`
+9. Validate with: `npm run health:check`
