@@ -36,7 +36,7 @@ At the end, the script will show you the **Environment Variables** you need for 
 3.  In the **Environment Variables** section, add the 3 variables shown at the end of Step 1:
     *   `VITE_SUPABASE_URL`
     *   `VITE_SUPABASE_PROJECT_ID`
-    *   `VITE_SUPABASE_PUBLISHABLE_KEY` (Find this in Supabase Dashboard -> Settings -> API)
+    *   `VITE_SUPABASE_PUBLISHABLE_KEY` (Find this in Supabase Dashboard -> Settings -> API) - Your Supabase anon/public key
 4.  Click **Deploy**.
 
 ## Step 3: Create Admin User
