@@ -210,10 +210,13 @@ export default function Auth() {
       return;
     }
 
-    const validation = validatePassword(password);
-    if (!validation.valid) {
-      toast.error(`Password requirements not met: ${validation.errors.join(", ")}`);
-      return;
+    // Only validate password requirements for sign-up, not sign-in
+    if (mode === "signup") {
+      const validation = validatePassword(password);
+      if (!validation.valid) {
+        toast.error(`Password requirements not met: ${validation.errors.join(", ")}`);
+        return;
+      }
     }
 
     setIsSubmitting(true);
